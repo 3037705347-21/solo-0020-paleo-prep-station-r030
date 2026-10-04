@@ -16,6 +16,10 @@
       "command": "go run ./cmd/workflowcheck --workflow register-specimen"
     },
     {
+      "workflow_id": "assess-readiness",
+      "command": "go run ./cmd/workflowcheck --workflow assess-readiness"
+    },
+    {
       "workflow_id": "approve-prep-plan",
       "command": "go run ./cmd/workflowcheck --workflow approve-prep-plan"
     },

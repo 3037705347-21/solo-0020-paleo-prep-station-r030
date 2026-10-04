@@ -64,17 +64,40 @@
       ]
     },
     {
+      "id": "assess-readiness",
+      "name": "Assess specimen handling readiness",
+      "entry": "POST /specimens/{id}/readiness-assessments + GET /specimens/{id}/readiness-assessments",
+      "steps": [
+        "validate decision, basis, assessor and the registered or planned specimen state",
+        "anchor the assessment to the current specimen version and reject a repeated identical decision",
+        "commit the assessment fact and specimen version advance in one repository mutation",
+        "gate new plan creation on the latest assessment being approved"
+      ],
+      "success": "returns the assessment record and ordered history; an approved latest assessment admits plan creation",
+      "failure": "returns 404 for an unknown specimen, 400 for invalid input, and 409 for repeated decisions or state conflicts",
+      "verification": "workflowcheck covers missing assessment blocking, return then re-approval restoring admission, duplicates, unknown specimens, post-preparation conflicts, and concurrent decisions",
+      "module_ids": [
+        "entrypoint",
+        "runtimecheck",
+        "httpapi",
+        "station",
+        "domain",
+        "repository",
+        "contracts"
+      ]
+    },
+    {
       "id": "approve-prep-plan",
       "name": "Approve preparation plan",
       "entry": "POST /specimens/{id}/plans + POST /plans/{id}/approval",
       "steps": [
-        "create one draft plan for an eligible specimen",
-        "validate the approver and current draft state",
+        "create one draft plan for a specimen whose latest readiness assessment is approved",
+        "link the draft plan to the approving assessment and validate the approver",
         "commit plan approval and specimen preparation in one repository mutation"
       ],
       "success": "returns an approved plan and a specimen in preparing status",
-      "failure": "returns conflict for an invalid specimen state or a second open plan",
-      "verification": "workflowcheck creates a plan, approves it, and verifies both plan and specimen states",
+      "failure": "returns conflict for a missing or returned assessment, invalid specimen state, or a second open plan",
+      "verification": "workflowcheck assesses the specimen, creates a plan, approves it, and verifies both plan and specimen states",
       "module_ids": [
         "entrypoint",
         "runtimecheck",
@@ -137,6 +160,6 @@
       "error_propagation",
       "concurrency"
     ],
-    "notes": "Plan and specimen state changes share one repository mutation; duplicate catalog numbers and unfinished plans are rejected at commit time."
+    "notes": "Plan and specimen state changes share one repository mutation; duplicate catalog numbers and unfinished plans are rejected at commit time. Readiness assessments anchor the specimen version and advance it atomically, and plan creation is gated on the latest approved assessment so concurrent identical decisions resolve to a single accepted fact."
   }
 }

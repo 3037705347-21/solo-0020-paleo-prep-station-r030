@@ -12,6 +12,7 @@ type state struct {
 	plans     map[string]domain.PrepPlan
 	progress  map[string][]domain.ProgressEntry
 	releases  map[string]domain.ReleaseRecord
+	readiness map[string]domain.ReadinessAssessment
 }
 
 type MemoryRepository struct {
@@ -26,6 +27,7 @@ func NewMemory() *MemoryRepository {
 			plans:     make(map[string]domain.PrepPlan),
 			progress:  make(map[string][]domain.ProgressEntry),
 			releases:  make(map[string]domain.ReleaseRecord),
+			readiness: make(map[string]domain.ReadinessAssessment),
 		},
 	}
 }
@@ -54,6 +56,7 @@ func cloneMutation(source state) *Mutation {
 		plans:     make(map[string]domain.PrepPlan, len(source.plans)),
 		progress:  make(map[string][]domain.ProgressEntry, len(source.progress)),
 		releases:  make(map[string]domain.ReleaseRecord, len(source.releases)),
+		readiness: make(map[string]domain.ReadinessAssessment, len(source.readiness)),
 	}
 	for key, value := range source.specimens {
 		copied.specimens[key] = value
@@ -66,6 +69,9 @@ func cloneMutation(source state) *Mutation {
 	}
 	for key, value := range source.releases {
 		copied.releases[key] = value
+	}
+	for key, value := range source.readiness {
+		copied.readiness[key] = value
 	}
 	return &Mutation{state: copied}
 }
@@ -163,4 +169,39 @@ func (m *Mutation) ReleaseForSpecimen(specimenID string) (domain.ReleaseRecord, 
 
 func (m *Mutation) PutRelease(value domain.ReleaseRecord) {
 	m.state.releases[value.ID] = value
+}
+
+func (m *Mutation) GetReadinessAssessment(id string) (domain.ReadinessAssessment, bool) {
+	value, ok := m.state.readiness[id]
+	return value, ok
+}
+
+// LatestReadinessAssessment 返回某标本最近一次评估，没有评估时第二个结果为 false。
+func (m *Mutation) LatestReadinessAssessment(specimenID string) (domain.ReadinessAssessment, bool) {
+	values := m.ReadinessAssessmentsForSpecimen(specimenID)
+	if len(values) == 0 {
+		return domain.ReadinessAssessment{}, false
+	}
+	return values[len(values)-1], true
+}
+
+// ReadinessAssessmentsForSpecimen 按提交时间（并列时按标识）升序返回评估历史。
+func (m *Mutation) ReadinessAssessmentsForSpecimen(specimenID string) []domain.ReadinessAssessment {
+	values := make([]domain.ReadinessAssessment, 0)
+	for _, value := range m.state.readiness {
+		if value.SpecimenID == specimenID {
+			values = append(values, value)
+		}
+	}
+	sort.Slice(values, func(i, j int) bool {
+		if values[i].AssessedAt.Equal(values[j].AssessedAt) {
+			return values[i].ID < values[j].ID
+		}
+		return values[i].AssessedAt.Before(values[j].AssessedAt)
+	})
+	return values
+}
+
+func (m *Mutation) PutReadinessAssessment(value domain.ReadinessAssessment) {
+	m.state.readiness[value.ID] = value
 }

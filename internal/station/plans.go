@@ -26,9 +26,17 @@ func (s *Service) CreatePlan(
 		if m.HasOpenPlan(specimenID) {
 			return contracts.Conflict("open_plan_exists", "该标本已存在未结束的修复方案")
 		}
+		latest, hasLatest := m.LatestReadinessAssessment(specimenID)
+		if !hasLatest {
+			return contracts.Conflict("readiness_not_assessed", "标本尚未完成处置就绪评估，不能创建修复方案")
+		}
+		if !latest.IsApproved() {
+			return contracts.Conflict("readiness_not_approved", "标本处置就绪评估未通过，不能创建修复方案")
+		}
 		plan, err := domain.NewPrepPlan(
 			s.nextID("plan"),
 			specimen,
+			latest,
 			request.Objective,
 			request.Method,
 			request.Adhesive,

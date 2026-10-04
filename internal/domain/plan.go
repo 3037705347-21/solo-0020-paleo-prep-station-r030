@@ -17,23 +17,25 @@ const (
 )
 
 type PrepPlan struct {
-	ID             string     `json:"id"`
-	SpecimenID     string     `json:"specimen_id"`
-	Objective      string     `json:"objective"`
-	Method         string     `json:"method"`
-	Adhesive       string     `json:"adhesive"`
-	TargetExposure int        `json:"target_exposure"`
-	Status         PlanStatus `json:"status"`
-	ApprovedBy     string     `json:"approved_by,omitempty"`
-	ApprovedAt     *time.Time `json:"approved_at,omitempty"`
-	Version        int        `json:"version"`
-	CreatedAt      time.Time  `json:"created_at"`
-	UpdatedAt      time.Time  `json:"updated_at"`
+	ID                    string     `json:"id"`
+	SpecimenID            string     `json:"specimen_id"`
+	ReadinessAssessmentID string     `json:"readiness_assessment_id"`
+	Objective             string     `json:"objective"`
+	Method                string     `json:"method"`
+	Adhesive              string     `json:"adhesive"`
+	TargetExposure        int        `json:"target_exposure"`
+	Status                PlanStatus `json:"status"`
+	ApprovedBy            string     `json:"approved_by,omitempty"`
+	ApprovedAt            *time.Time `json:"approved_at,omitempty"`
+	Version               int        `json:"version"`
+	CreatedAt             time.Time  `json:"created_at"`
+	UpdatedAt             time.Time  `json:"updated_at"`
 }
 
 func NewPrepPlan(
 	id string,
 	specimen Specimen,
+	readiness ReadinessAssessment,
 	objective string,
 	method string,
 	adhesive string,
@@ -45,6 +47,12 @@ func NewPrepPlan(
 	}
 	if !specimen.CanCreatePlan() {
 		return PrepPlan{}, contracts.Conflict("specimen_not_plannable", "当前标本状态不能创建修复方案")
+	}
+	if readiness.SpecimenID != specimen.ID {
+		return PrepPlan{}, contracts.Conflict("readiness_specimen_mismatch", "就绪评估不属于当前标本")
+	}
+	if !readiness.IsApproved() {
+		return PrepPlan{}, contracts.Conflict("readiness_not_approved", "标本尚未通过处置就绪评估，不能创建修复方案")
 	}
 	goal, err := requiredText("修复目标", objective, 200)
 	if err != nil {
@@ -65,16 +73,17 @@ func NewPrepPlan(
 		return PrepPlan{}, contracts.Invalid("invalid_target_exposure", "目标暴露比例必须大于零")
 	}
 	return PrepPlan{
-		ID:             id,
-		SpecimenID:     specimen.ID,
-		Objective:      goal,
-		Method:         approach,
-		Adhesive:       adhesiveValue,
-		TargetExposure: targetExposure,
-		Status:         PlanDraft,
-		Version:        1,
-		CreatedAt:      now.UTC(),
-		UpdatedAt:      now.UTC(),
+		ID:                    id,
+		SpecimenID:            specimen.ID,
+		ReadinessAssessmentID: readiness.ID,
+		Objective:             goal,
+		Method:                approach,
+		Adhesive:              adhesiveValue,
+		TargetExposure:        targetExposure,
+		Status:                PlanDraft,
+		Version:               1,
+		CreatedAt:             now.UTC(),
+		UpdatedAt:             now.UTC(),
 	}, nil
 }
 

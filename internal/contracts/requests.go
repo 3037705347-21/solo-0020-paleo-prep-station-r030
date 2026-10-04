@@ -31,3 +31,9 @@ type ReleaseRequest struct {
 	Recipient  string `json:"recipient"`
 	ApprovedBy string `json:"approved_by"`
 }
+
+type ReadinessAssessmentRequest struct {
+	Decision   string `json:"decision"`
+	Basis      string `json:"basis"`
+	AssessedBy string `json:"assessed_by"`
+}

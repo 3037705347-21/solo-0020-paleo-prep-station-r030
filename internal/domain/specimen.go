@@ -79,8 +79,21 @@ func (s Specimen) CanCreatePlan() bool {
 	return s.Status == SpecimenRegistered || s.Status == SpecimenPlanned
 }
 
+// CanAssessReadiness 判断标本是否还能提交处置就绪评估。
+// 评估是正式制备前的独立把关：进入制备中及更后状态的标本不再受理新评估。
+func (s Specimen) CanAssessReadiness() bool {
+	return s.Status == SpecimenRegistered || s.Status == SpecimenPlanned
+}
+
 func (s Specimen) IsStable() bool {
 	return s.Status == SpecimenStabilized
+}
+
+// TouchReadinessVersion 在一次评估成功提交后推进标本版本，
+// 使标本快照能够反映评估事实的变化；不改变标本状态。
+func (s *Specimen) TouchReadinessVersion(now time.Time) {
+	s.Version++
+	s.UpdatedAt = now.UTC()
 }
 
 func (s *Specimen) MarkPlanned(now time.Time) error {

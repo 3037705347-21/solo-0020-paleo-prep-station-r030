@@ -27,11 +27,14 @@ go run ./cmd/paleo-prep-station --addr 127.0.0.1:18133
 
 - `GET /specimens` 与 `POST /specimens`
 - `GET /specimens/{id}`
+- `GET /specimens/{id}/readiness-assessments` 与 `POST /specimens/{id}/readiness-assessments`
 - `POST /specimens/{id}/plans`
 - `GET /plans/{id}`
 - `POST /plans/{id}/approval`
 - `POST /plans/{id}/progress`
 - `POST /specimens/{id}/release`
+
+只有处置就绪评估最新结论为通过的标本才能创建新修复方案；退回的标本需要再次评估通过才能恢复准入。
 
 ## 本地验证
 
@@ -39,6 +42,7 @@ go run ./cmd/paleo-prep-station --addr 127.0.0.1:18133
 
 ```bash
 go run ./cmd/workflowcheck --workflow register-specimen
+go run ./cmd/workflowcheck --workflow assess-readiness
 go run ./cmd/workflowcheck --workflow approve-prep-plan
 go run ./cmd/workflowcheck --workflow log-preparation
 go run ./cmd/workflowcheck --workflow release-for-study
