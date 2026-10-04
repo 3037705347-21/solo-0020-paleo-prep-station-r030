@@ -15,6 +15,12 @@ type CreatePlanRequest struct {
 	TargetExposure int    `json:"target_exposure"`
 }
 
+type AssessReadinessRequest struct {
+	Outcome    string `json:"outcome"`
+	Basis      string `json:"basis"`
+	AssessedBy string `json:"assessed_by"`
+}
+
 type ApprovalRequest struct {
 	ApprovedBy string `json:"approved_by"`
 }

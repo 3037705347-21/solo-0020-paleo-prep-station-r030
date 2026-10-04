@@ -46,6 +46,12 @@ func NewPrepPlan(
 	if !specimen.CanCreatePlan() {
 		return PrepPlan{}, contracts.Conflict("specimen_not_plannable", "当前标本状态不能创建修复方案")
 	}
+	if specimen.Readiness == ReadinessReturned {
+		return PrepPlan{}, contracts.Conflict("assessment_returned", "标本评估已被退回，重新评估通过前不能创建修复方案")
+	}
+	if !specimen.ReadyForPlanning() {
+		return PrepPlan{}, contracts.Conflict("assessment_required", "标本尚未通过处置就绪评估，不能创建修复方案")
+	}
 	goal, err := requiredText("修复目标", objective, 200)
 	if err != nil {
 		return PrepPlan{}, err

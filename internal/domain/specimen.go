@@ -24,6 +24,7 @@ type Specimen struct {
 	MatrixKind    string         `json:"matrix_kind"`
 	JacketNotes   string         `json:"jacket_notes"`
 	Status        SpecimenStatus `json:"status"`
+	Readiness     ReadinessState `json:"readiness"`
 	Version       int            `json:"version"`
 	CreatedAt     time.Time      `json:"created_at"`
 	UpdatedAt     time.Time      `json:"updated_at"`
@@ -69,6 +70,7 @@ func NewSpecimen(
 		MatrixKind:    matrix,
 		JacketNotes:   notes,
 		Status:        SpecimenRegistered,
+		Readiness:     ReadinessUnassessed,
 		Version:       1,
 		CreatedAt:     now.UTC(),
 		UpdatedAt:     now.UTC(),
@@ -77,6 +79,34 @@ func NewSpecimen(
 
 func (s Specimen) CanCreatePlan() bool {
 	return s.Status == SpecimenRegistered || s.Status == SpecimenPlanned
+}
+
+func (s Specimen) CanAssessReadiness() bool {
+	return s.Status == SpecimenRegistered || s.Status == SpecimenPlanned
+}
+
+func (s Specimen) ReadyForPlanning() bool {
+	return s.Readiness == ReadinessPassed
+}
+
+func (s *Specimen) ApplyAssessment(outcome AssessmentOutcome, now time.Time) error {
+	if !s.CanAssessReadiness() {
+		return contracts.Conflict("specimen_not_assessable", "当前标本状态不能提交处置就绪评估")
+	}
+	if s.Readiness == ReadinessPassed {
+		return contracts.Conflict("assessment_already_passed", "标本已通过处置就绪评估，不能重复评估")
+	}
+	switch outcome {
+	case AssessmentPassed:
+		s.Readiness = ReadinessPassed
+	case AssessmentReturned:
+		s.Readiness = ReadinessReturned
+	default:
+		return contracts.Invalid("invalid_assessment_outcome", "评估结论只能是 passed 或 returned")
+	}
+	s.Version++
+	s.UpdatedAt = now.UTC()
+	return nil
 }
 
 func (s Specimen) IsStable() bool {
